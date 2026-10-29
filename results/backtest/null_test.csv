@@ -1,0 +1,8 @@
+,0
+ml_mean_net_bps,1.4482697887921554
+random_mean_net_bps,-9.263760001758156
+random_p5,-16.265703248263573
+random_p95,4.531810837717588
+ml_percentile_vs_random,0.9
+ml_sharpe,0.019741449160064064
+random_sharpe_mean,-0.26491154296483727

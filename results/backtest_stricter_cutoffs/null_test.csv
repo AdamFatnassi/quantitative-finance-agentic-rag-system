@@ -1,0 +1,15 @@
+,0
+baseline_ml_mean_net_bps,-103.74641589323363
+baseline_random_mean_net_bps,-50.3542790564176
+baseline_random_p5,-76.25606155656813
+baseline_random_p95,-12.319985504810026
+baseline_ml_percentile_vs_random,0.0
+baseline_ml_sharpe,-0.5199440355706231
+baseline_random_sharpe_mean,-0.5193249135711473
+strict_ml_mean_net_bps,-108.37492566470166
+strict_random_mean_net_bps,-39.887271709447276
+strict_random_p5,-69.02662251945942
+strict_random_p95,23.178490752062707
+strict_ml_percentile_vs_random,0.0
+strict_ml_sharpe,-0.4458873655460605
+strict_random_sharpe_mean,-0.29941499940216415

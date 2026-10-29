@@ -1,0 +1,72 @@
+# ==============================================================================
+# Git Ignore - Quantitative Finance Agentic RAG System
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions
+*.dll
+*.dylib
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Environment variables & credentials
+.env
+.env.*
+!.env.example
+
+# Database & Container persistence volumes
+postgres_data/
+qdrant_storage/
+*.sqlite3
+*.db
+
+# Data & Data Lake (Completely excluded from version control: raw files, parquets, lake, sec filings)
+data/
+
+# Unit test & Coverage artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDE & Editor Configurations
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# Scratch & temporary development logs
+scratch/
+scratch_*.py
+patch_*.py
+test_audit_ui.py
+*.log
+transcript.jsonl
+transcript_full.jsonl
+.system_generated/
