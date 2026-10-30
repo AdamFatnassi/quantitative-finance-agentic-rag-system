@@ -35,7 +35,7 @@ This project places an **Agentic Risk Gatekeeper** between the quantitative sign
 Data flows from two sources (prices and regulatory text) into a storage layer, then through the quant engine, the risk gatekeeper, and finally the serving layer.
 
 <p align="center">
-  <img src="imgs\quant1.svg" alt="End-to-end system architecture: data sources, storage layer, quant engine, agentic risk gatekeeper, serving layer" width="720">
+  <img src="imgs\quant1.svg" alt="End-to-end system architecture: data sources, storage layer, quant engine, agentic risk gatekeeper, serving layer" width="200">
 </p>
 
 <p align="center"><em>Figure 1 — End-to-end architecture</em></p>
@@ -47,7 +47,7 @@ Data flows from two sources (prices and regulatory text) into a storage layer, t
 Every signal takes one of two paths. The **fast path** (no filing in the last 7 days) returns GO immediately. The **agent path** wakes the LLM, and only escalates to Monte Carlo when the text is ambiguous.
 
 <p align="center">
-  <img src="imgs\quant2.svg" alt="Gatekeeper decision flow: 7-day pre-filter, LLM text evaluation, Monte Carlo breach probability check, GO or VETO" width="600">
+  <img src="imgs\quant2.svg" alt="Gatekeeper decision flow: 7-day pre-filter, LLM text evaluation, Monte Carlo breach probability check, GO or VETO" width="200">
 </p>
 
 <p align="center"><em>Figure 2 — Risk gatekeeper decision logic</em></p>
@@ -64,16 +64,17 @@ Every signal takes one of two paths. The **fast path** (no filing in the last 7 
 ### 1. Quantitative Pairs Engine & ML Meta-Labeling
 
 - **Cointegration screening** of S&P 500 pairs with Engle-Granger and Johansen tests over historical lookback windows.
-- **Dynamic spread**:
+- **Dynamic spread**, where $\beta$ is the hedge ratio from rolling OLS or a Kalman filter:
 
-  $$\text{Spread}_t = \ln(P_{A,t}) - \beta \cdot \ln(P_{B,t})$$
+```math
+\text{Spread}_t = \ln(P_{A,t}) - \beta \cdot \ln(P_{B,t})
+```
 
-  where $\beta$ is the hedge ratio from rolling OLS or a Kalman filter.
 - **Meta-labeling**: XGBoost / LightGBM classifiers trained on spread momentum, volatility ratios, rolling half-life and Hidden Markov Model regime probabilities, to filter false breakouts.
 
 ### 2. Point-in-Time Agentic RAG Gatekeeper
 
-- **Strict PIT filtering**: retrieved filings must satisfy $\text{available\_at} \le t_{\text{signal}}$.
+- **Strict PIT filtering**: a filing is retrievable only if its `available_at` timestamp is not later than the signal time $t_{\text{signal}}$, which prevents look-ahead bias.
 - **Hybrid search with Reciprocal Rank Fusion (RRF)**: dense vectors (`BAAI/bge-small-en-v1.5`) fused with sparse BM25 tokens (`Qdrant/bm25`).
 - **Forensic risk taxonomy**:
   - `financial_distress`: Item 4.02 non-reliance on financials, Item 1.03 bankruptcy, going-concern warnings.
@@ -85,7 +86,9 @@ Every signal takes one of two paths. The **fast path** (no filing in the last 7 
 
 Implemented in [`src/quant/monte_carlo.py`](src/quant/monte_carlo.py) using the exact OU discretization:
 
-$$S_{t+1} = S_t e^{-\theta \Delta t} + \mu(1 - e^{-\theta \Delta t}) + \sigma_{OU}\sqrt{\frac{1-e^{-2\theta\Delta t}}{2\theta}}\, Z_t, \quad Z_t \sim \mathcal{N}(0, 1)$$
+```math
+S_{t+1} = S_t e^{-\theta \Delta t} + \mu(1 - e^{-\theta \Delta t}) + \sigma_{OU}\sqrt{\frac{1-e^{-2\theta\Delta t}}{2\theta}}\, Z_t, \quad Z_t \sim \mathcal{N}(0, 1)
+```
 
 - $\theta$, $\mu$ and $\sigma_{OU}$ are estimated by AR(1) OLS on point-in-time spread history.
 - Half-life: $T_{1/2} = \ln(2) / \theta$.
