@@ -1,5 +1,6 @@
 # 🛡️ Quantitative Finance Agentic RAG System
-### Institutional Statistical Arbitrage with an LLM Forensic Risk Gatekeeper & Monte Carlo Spread Stress-Testing
+
+### Statistical Arbitrage with an LLM Forensic Risk Gatekeeper & Monte Carlo Spread Stress-Testing
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-1.0.0-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -7,191 +8,149 @@
 [![LangChain](https://img.shields.io/badge/LangChain-Enabled-1C3C3C.svg)](https://www.langchain.com/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-Hybrid_Vector_Store-DC2626.svg?logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![TimescaleDB](https://img.shields.io/badge/TimescaleDB-PostgreSQL_17-F58220.svg?logo=postgresql&logoColor=white)](https://www.timescale.com/)
-[![Tests Passing](https://img.shields.io/badge/tests-34%2F34%20passed-brightgreen.svg)](#-test-verification-suite)
+[![Tests Passing](https://img.shields.io/badge/tests-34%2F34%20passed-brightgreen.svg)](#-tests)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 📌 Executive Summary & Quantitative Thesis
+## 📌 Overview
 
-Statistical arbitrage (pairs trading) fundamentally relies on the assumption that spread divergences between cointegrated equities represent **transitory liquidity noise** that will mean-revert according to an Ornstein-Uhlenbeck process.
+Pairs trading assumes that a spread divergence between two cointegrated stocks is **transitory liquidity noise** that will mean-revert, following an Ornstein-Uhlenbeck (OU) process.
 
-However, econometric models inevitably fail when a spread widening is driven by an unmodeled **structural fundamental shock** (e.g., accounting fraud, SEC subpoenas, failed M&A mergers, sudden executive departures, or debt covenant breaches). In these regimes, the long-term cointegration relationship breaks permanently, and a naive quantitative model aggressively averages down into a catastrophic **value trap**.
+That assumption breaks when the divergence is caused by a **structural fundamental shock**: accounting fraud, an SEC subpoena, a failed merger, a sudden executive departure, a debt covenant breach. The cointegration relationship is then permanently broken, and a naive model keeps averaging down into a **value trap**.
 
-This system solves that structural vulnerability by inserting an **Agentic Risk Gatekeeper** directly between the quantitative signal generation engine and the execution layer:
-1. **Point-in-Time (PIT) Regulatory RAG**: Interrogates SEC 8-K / 10-K filings and earnings transcripts strictly prior to signal timestamps with zero look-ahead bias.
-2. **0ms Fast Metadata Pre-Filter**: Bypasses 80–90% of routine market pairs instantly when no recent material filings exist, eliminating unnecessary compute.
-3. **Skeptical LLM Forensic Adjudicator**: Evaluates corporate disclosures for critical risk items (`financial_distress`, `legal_regulatory`, `executive_governance`, `operational`) using structured JSON outputs.
-4. **Ornstein-Uhlenbeck Monte Carlo Path Simulator**: Numerically simulates 1,000 forward paths to stress-test reversion probability ($|z| \le 0.5$) and adverse stop breach probability ($|z| \ge 4.0$).
+This project places an **Agentic Risk Gatekeeper** between the quantitative signal engine and execution:
 
----
-
-## 🏗️ End-to-End System Architecture
-
-```mermaid
-flowchart TD
-    subgraph Data_Ingestion["1. Data Ingestion & Storage"]
-        MKT["Market Price Data\n(S&P 500 Ticks / OHLCV)"] --> DB[("TimescaleDB / PostgreSQL\n(Port 5433)")]
-        SEC["SEC EDGAR Scraper\n(8-K, 10-K, 10-Q)"] --> CHUNK["Chunking & Embeddings\n(BGE-Dense + BM25-Sparse)"]
-        TRANS["Earnings Call Transcripts\n(Quarterly Calls)"] --> CHUNK
-        CHUNK --> QDRANT[("Qdrant Vector Database\n(Port 6333)")]
-    end
-
-    subgraph Quant_Engine["2. Quantitative Engine & ML Filter"]
-        DB --> COINT["Cointegration Screening\n(Engle-Granger & Johansen)"]
-        COINT --> KALMAN["Dynamic Hedge Ratio\n(Kalman Filter / OLS Spread)"]
-        KALMAN --> HMM["Regime Filter & Indicators\n(HMM Volatility & Spread Z-Score)"]
-        HMM --> ML["ML Meta-Labeling Classifier\n(XGBoost / LightGBM)"]
-        ML --> SIGNAL["Signal Trigger Generated\n(Ticker A, Ticker B, Z-Score, PIT Timestamp)"]
-    end
-
-    subgraph Gatekeeper["3. Agentic Risk Gatekeeper & Stress Testing"]
-        SIGNAL --> PREFILTER{"Fast Metadata Pre-Filter\n(Filings in Trailing 7 Days?)"}
-        PREFILTER -- "No Filings" --> INSTANT_GO["Instant 0ms Clear (GO)\n(Transient Divergence)"]
-        PREFILTER -- "Filings Exist" --> PIT_RAG["Point-in-Time Hybrid Search\n(Qdrant RRF Fusion <= Timestamp)"]
-        PIT_RAG --> LLM["LLM Forensic Evaluator\n(Qwen2.5:1.5b / Gemma / GPT-4o)"]
-        LLM --> RISK_CHECK{"Fundamental\nShock Detected?"}
-        RISK_CHECK -- "Severe Distress / Fraud" --> VETO["🚫 VETO (Trade Aborted)\n(Capital Preserved)"]
-        RISK_CHECK -- "Ambiguous Risk" --> MC_ENGINE["🎲 Monte Carlo OU Engine\n(1,000 Discretized Path Simulations)"]
-        MC_ENGINE --> MC_CHECK{"Conv. >= 50% &\nBreach <= 25%?"}
-        MC_CHECK -- "Yes" --> GO["✅ GO (Execution Approved)"]
-        MC_CHECK -- "No" --> VETO
-        RISK_CHECK -- "Routine Filings" --> GO
-    end
-
-    subgraph Interface["4. Deployment & Interfaces"]
-        INSTANT_GO --> API["FastAPI Microservice\n(/api/v1/evaluate-signal)"]
-        VETO --> API
-        GO --> API
-        API --> DASHBOARD["Streamlit Analytics Dashboard\n(Port 8501)"]
-    end
-```
+| Stage | What it does |
+|:---|:---|
+| **Point-in-Time (PIT) RAG** | Searches SEC 8-K / 10-K filings and earnings transcripts available *strictly before* the signal timestamp, with zero look-ahead bias. |
+| **0 ms metadata pre-filter** | Clears routine pairs instantly when no recent filing exists, which removes 80–90% of the LLM workload. |
+| **Forensic LLM adjudicator** | Classifies disclosures into `financial_distress`, `legal_regulatory`, `executive_governance`, `operational` using structured JSON output. |
+| **OU Monte Carlo stress-test** | Simulates 1,000 forward spread paths to estimate reversion probability and stop-loss breach probability when the text is ambiguous. |
 
 ---
 
-## ⚡ Agentic Decision Flow & Monte Carlo Gate
+## 🏗️ System Architecture
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Engine as Quantitative Engine
-    participant Prefilter as 0ms Qdrant Pre-Filter
-    participant VectorStore as Qdrant Vector Store
-    participant Agent as Forensic LLM Agent
-    participant MonteCarlo as Monte Carlo OU Simulator
-    participant Exec as Execution / Order Layer
+Data flows from two sources (prices and regulatory text) into a storage layer, then through the quant engine, the risk gatekeeper, and finally the serving layer.
 
-    Engine->>Prefilter: Pair Divergence Signal (|z| >= 2.0, PIT Timestamp)
-    Prefilter->>VectorStore: Probe Metadata: Count filings in [t - 7d, t]
-    alt No Filings Found in Window
-        Prefilter-->>Exec: Instant Bypass GO (0ms latency, zero GPU cost)
-    else Material Filings Detected
-        Prefilter->>VectorStore: Hybrid PIT Query (Dense BGE + Sparse BM25)
-        VectorStore-->>Agent: Strict PIT Regulatory Chunks (available_at <= t)
-        Agent->>Agent: Inspect SEC Items (4.02, 1.03, 5.02, 2.01)
-        alt Clear Fundamental Breakdown (Item 4.02 Restatement / Item 1.03 Bankruptcy)
-            Agent-->>Exec: VETO (Block Trade, Categorize Risk, Cite Accession #)
-        else Ambiguous Market News
-            Agent->>MonteCarlo: Trigger Quantitative Stress-Test (S_0, θ, σ_OU, 10 Days)
-            MonteCarlo->>MonteCarlo: Simulate 1,000 Ornstein-Uhlenbeck Paths
-            MonteCarlo-->>Agent: Return Conv. Prob, Breach Prob, Half-Life
-            alt Convergence < 50% OR Stop Breach > 25%
-                Agent-->>Exec: VETO (Quantitative Reversion Breakdown)
-            else Convergence >= 70% AND Breach < 15%
-                Agent-->>Exec: GO (Quantitative Reversion Confirmed)
-            end
-        end
-    end
-```
+<p align="center">
+  <img src="img/quant1.svg" alt="End-to-end system architecture: data sources, storage layer, quant engine, agentic risk gatekeeper, serving layer" width="720">
+</p>
+
+<p align="center"><em>Figure 1 — End-to-end architecture</em></p>
+
+---
+
+## ⚡ Gatekeeper Decision Flow
+
+Every signal takes one of two paths. The **fast path** (no filing in the last 7 days) returns GO immediately. The **agent path** wakes the LLM, and only escalates to Monte Carlo when the text is ambiguous.
+
+<p align="center">
+  <img src="img/quant2.svg" alt="Gatekeeper decision flow: 7-day pre-filter, LLM text evaluation, Monte Carlo breach probability check, GO or VETO" width="600">
+</p>
+
+<p align="center"><em>Figure 2 — Risk gatekeeper decision logic</em></p>
+
+**Outcomes**
+
+- **GO**: no recent filing, clear safety in the text, or a low simulated breach probability.
+- **VETO**: clear red flag in the text (for example SEC Item 4.02 restatement or Item 1.03 bankruptcy), or a high simulated breach probability.
 
 ---
 
 ## 🔬 Core Components
 
 ### 1. Quantitative Pairs Engine & ML Meta-Labeling
-* **Cointegration Universe Screening**: Evaluates all S&P 500 pair combinations across historical lookback windows using Engle-Granger and Johansen cointegration tests.
-* **Dynamic Spread Calculation**:
+
+- **Cointegration screening** of S&P 500 pairs with Engle-Granger and Johansen tests over historical lookback windows.
+- **Dynamic spread**:
+
   $$\text{Spread}_t = \ln(P_{A,t}) - \beta \cdot \ln(P_{B,t})$$
-  Where $\beta$ is the optimal hedge ratio calculated via rolling OLS or the Kalman Filter.
-* **Machine Learning Meta-Labeling**: Gradient-boosted classifiers (XGBoost & LightGBM) trained on spread momentum, volatility ratios, rolling half-life, and Hidden Markov Model (HMM) regime probabilities to filter false breakouts.
+
+  where $\beta$ is the hedge ratio from rolling OLS or a Kalman filter.
+- **Meta-labeling**: XGBoost / LightGBM classifiers trained on spread momentum, volatility ratios, rolling half-life and Hidden Markov Model regime probabilities, to filter false breakouts.
 
 ### 2. Point-in-Time Agentic RAG Gatekeeper
-* **Strict Point-in-Time (PIT) Filtering**: Enforces that retrieved regulatory filings satisfy $\text{available\_at} \le t_{\text{signal}}$, preventing any look-ahead bias.
-* **Hybrid Search with Reciprocal Rank Fusion (RRF)**: Fuses dense semantic vector representations (`BAAI/bge-small-en-v1.5`) with sparse lexical tokens (`Qdrant/bm25`).
-* **Forensic SEC Item Taxonomy**:
-  - `financial_distress`: Item 4.02 Non-reliance on financial statements, Item 1.03 Bankruptcy/Receivership, going-concern warnings.
-  - `legal_regulatory`: Formal SEC/DOJ subpoenas, anti-trust litigation, criminal investigations.
-  - `executive_governance`: Item 5.02 Unannounced CEO/CFO departures, board mutiny, executive fraud.
-  - `operational`: Item 2.01 Catastrophic M&A terminations, Item 1.02 Major customer cancellations.
+
+- **Strict PIT filtering**: retrieved filings must satisfy $\text{available\_at} \le t_{\text{signal}}$.
+- **Hybrid search with Reciprocal Rank Fusion (RRF)**: dense vectors (`BAAI/bge-small-en-v1.5`) fused with sparse BM25 tokens (`Qdrant/bm25`).
+- **Forensic risk taxonomy**:
+  - `financial_distress`: Item 4.02 non-reliance on financials, Item 1.03 bankruptcy, going-concern warnings.
+  - `legal_regulatory`: SEC/DOJ subpoenas, antitrust litigation, criminal investigations.
+  - `executive_governance`: Item 5.02 unannounced CEO/CFO departures, board conflict, executive fraud.
+  - `operational`: Item 2.01 failed M&A, Item 1.02 loss of a major customer.
 
 ### 3. Ornstein-Uhlenbeck Monte Carlo Engine
-Located in [`src/quant/monte_carlo.py`](src/quant/monte_carlo.py), this module provides numerical stress-testing of cointegrated spreads using exact SDE discretization:
 
-$$S_{t+1} = S_t e^{-\theta \Delta t} + \mu(1 - e^{-\theta \Delta t}) + \sigma_{OU}\sqrt{\frac{1-e^{-2\theta\Delta t}}{2\theta}} Z_t, \quad Z_t \sim \mathcal{N}(0, 1)$$
+Implemented in [`src/quant/monte_carlo.py`](src/quant/monte_carlo.py) using the exact OU discretization:
 
-* Mean reversion rate $\theta$, long-term mean $\mu$, and volatility $\sigma_{OU}$ are estimated via AR(1) OLS on point-in-time spread history.
-* Mean-reversion half-life is determined via:
-  $$T_{1/2} = \frac{\ln(2)}{\theta}$$
-* Generates $N = 1,000$ forward paths over a 10-day trading horizon to compute:
-  - **Probability of Convergence**: Fraction of paths hitting $|z| \le 0.5$ (reversion).
-  - **Adverse Breach Probability**: Fraction of paths hitting $|z| \ge 4.0$ (stop-loss breach).
-  - **Expected Max Drawdown**: Peak spread excursion in basis points.
+$$S_{t+1} = S_t e^{-\theta \Delta t} + \mu(1 - e^{-\theta \Delta t}) + \sigma_{OU}\sqrt{\frac{1-e^{-2\theta\Delta t}}{2\theta}}\, Z_t, \quad Z_t \sim \mathcal{N}(0, 1)$$
+
+- $\theta$, $\mu$ and $\sigma_{OU}$ are estimated by AR(1) OLS on point-in-time spread history.
+- Half-life: $T_{1/2} = \ln(2) / \theta$.
+- Simulates $N = 1{,}000$ paths over a 10-day horizon and reports:
+  - **Probability of convergence**: share of paths reaching $|z| \le 0.5$.
+  - **Breach probability**: share of paths reaching $|z| \ge 4.0$ (stop-loss).
+  - **Expected max drawdown**: peak spread excursion in basis points.
 
 ---
 
-## 📊 Backtest Performance & Capital Preservation
+## 📊 Backtest Results
 
-Evaluating out-of-sample ML-selected trades on S&P 500 equity pairs reveals the impact of adding the Agentic Risk Gatekeeper:
+Out-of-sample ML-selected trades on S&P 500 pairs, with and without the gatekeeper:
 
-| Metric | Raw ML Filter Baseline | ML Filter + Agentic Gatekeeper (RAG) | Delta / Edge |
+| Metric | ML filter only | ML filter + Gatekeeper | Delta |
 |:---|:---:|:---:|:---:|
-| **Sharpe Ratio** | 1.14 | **1.78** | **+0.64 (+56.1%)** |
-| **Win Rate** | 62.4% | **71.2%** | **+8.8%** |
-| **Catastrophic Breakdowns Blocked** | 0 / 25 | **18 / 25** | **72.0% Risk Shield** |
-| **Unfavorable Stop-Losses Vetoed** | — | **42 trades** | **Capital Preserved** |
-| **Cumulative Capital Saved** | 0 bps | **+1,420 bps** | **Tail-Risk Eliminated** |
-| **Average Vetoed Trade P&L** | -24.8 bps | **-24.8 bps** | **Negative Alpha Avoided** |
+| **Sharpe ratio** | 1.14 | **1.78** | +0.64 (+56.1%) |
+| **Win rate** | 62.4% | **71.2%** | +8.8 pts |
+| **Catastrophic breakdowns blocked** | 0 / 25 | **18 / 25** | 72.0% |
+| **Stop-loss trades vetoed** | n/a | **42** | |
+| **Cumulative capital saved** | 0 bps | **+1,420 bps** | |
+| **Average vetoed trade P&L** | n/a | **-24.8 bps** | Losses avoided |
 
-> **Key Takeaway**: The Agentic Gatekeeper's value is asymmetric: it sacrifices a marginal false-veto rate (~3.8% on profitable trades) to eliminate 72% of structural breakdowns that inflict severe multi-sigma portfolio drawdowns.
+> **Takeaway:** the gatekeeper accepts a small false-veto rate (about 3.8% of profitable trades) in exchange for blocking 72% of structural breakdowns, which are the trades that cause multi-sigma drawdowns.
 
 ---
 
-## 💻 Streamlit Control Center
-
-The interactive Streamlit platform (`app/Home.py`) provides four analytical views:
+## 💻 Streamlit Dashboard
 
 ```
 app/
-├── Home.py                  # System Overview, Architecture, Key Performance Metrics
+├── Home.py                  # Overview, architecture, key metrics
 └── pages/
-    ├── 1_ML_Performance.py  # Precision-Recall Curves, ROC, Confusion Matrix, Feature Importance
-    ├── 2_Backtest.py        # Event-driven Backtesting, Parameter Sensitivity, Equity Curves
-    ├── 3_Pairs_Regime.py    # Live Cointegration Testing, Spread Tracking, Rolling Half-Life
-    └── 4_Live_Gatekeeper.py # Single Signal Inspector, Batch Universe Review, ML Backtest Arena
+    ├── 1_ML_Performance.py  # PR/ROC curves, confusion matrix, feature importance
+    ├── 2_Backtest.py        # Event-driven backtest, parameter sensitivity, equity curves
+    ├── 3_Pairs_Regime.py    # Live cointegration tests, spread tracking, rolling half-life
+    └── 4_Live_Gatekeeper.py # Single-signal inspector, batch review, backtest arena
 ```
 
-### Highlights of `4_Live_Gatekeeper.py`:
-* **Single Signal Inspection**: Interactive input with real-time RAG adjudication, KPI cards, and Plotly Monte Carlo fan chart displaying P10/P25/P50/P75/P90 projection cones.
-* **Batch Universe Evaluation**: Concurrently evaluates baskets of signals with real-time `Conv. %` and `Breach %` Monte Carlo diagnostics.
-* **Agentic Backtest Arena**: Full backtest testing the Gatekeeper on out-of-sample ML trades, featuring the **Interactive Forensic Dossier Inspector** with SEC disclosure citations.
+**`4_Live_Gatekeeper.py` highlights**
+
+- **Single signal inspection**: real-time RAG verdict, KPI cards, and a Plotly Monte Carlo fan chart (P10 / P25 / P50 / P75 / P90).
+- **Batch evaluation**: concurrent review of signal baskets with live `Conv. %` and `Breach %` diagnostics.
+- **Backtest arena**: out-of-sample ML trades run through the gatekeeper, with a forensic dossier inspector that cites the SEC disclosures behind each decision.
 
 ---
 
-## 🔌 FastAPI Microservice Endpoints
+## 🔌 REST API
 
-Run the production REST API:
 ```bash
 uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 | Method | Endpoint | Description |
 |:---|:---|:---|
-| `GET` | `/health` | Health probe checking TimescaleDB and Qdrant cluster status |
-| `POST` | `/api/v1/evaluate-signal` | Evaluates a single pair divergence signal for fundamental value traps |
+| `GET` | `/health` | Health check for TimescaleDB and Qdrant |
+| `POST` | `/api/v1/evaluate-signal` | Evaluate one pair divergence signal for fundamental value traps |
 | `POST` | `/api/v1/batch-evaluate` | Concurrent batch evaluation with in-memory deduplication and caching |
-| `POST` | `/api/v1/simulate-spread` | Runs 1,000-path Ornstein-Uhlenbeck Monte Carlo simulation on demand |
+| `POST` | `/api/v1/simulate-spread` | On-demand 1,000-path OU Monte Carlo simulation |
 
-#### Sample Simulation Request (`POST /api/v1/simulate-spread`):
+<details>
+<summary><b>Example: <code>POST /api/v1/simulate-spread</code></b></summary>
+
+**Request**
+
 ```json
 {
   "ticker_a": "JPM",
@@ -203,7 +162,8 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
 }
 ```
 
-#### Response:
+**Response**
+
 ```json
 {
   "ticker_a": "JPM",
@@ -223,82 +183,59 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
 }
 ```
 
+</details>
+
 ---
 
-## 🧪 Test Verification Suite
+## 🧪 Tests
 
-The repository contains an automated test suite verifying point-in-time constraints, schema bounds, Monte Carlo mathematics, and API endpoints:
+The suite covers point-in-time constraints, schema validation, Monte Carlo maths and API endpoints.
 
 ```bash
-# Run the entire test suite with coverage
 pytest tests/ -v
 ```
 
-```
-============================= test session starts =============================
-platform win32 -- Python 3.12.4, pytest-9.1.1
-collected 34 items
-
-tests/test_backtest_coverage.py   .......... [ 29%] (10 tests passing)
-tests/test_agentic_gatekeeper.py  .........  [ 55%] ( 9 tests passing)
-tests/test_monte_carlo.py         .........  [ 82%] ( 9 tests passing)
-tests/test_gatekeeper_api.py      ......     [100%] ( 6 tests passing)
-
-============================= 34 passed in 9.74s ==============================
-```
+| File | Tests |
+|:---|:---:|
+| `test_backtest_coverage.py` | 10 |
+| `test_agentic_gatekeeper.py` | 9 |
+| `test_monte_carlo.py` | 9 |
+| `test_gatekeeper_api.py` | 6 |
+| **Total** | **34 passed** |
 
 ---
 
-## 🚀 Quickstart Installation Guide
+## 🚀 Quickstart
 
-### Prerequisites
-* **Python**: 3.10+ (tested on Python 3.12)
-* **Docker & Docker Compose**: For TimescaleDB and Qdrant
-* **Ollama** (Optional for local LLM inference): `ollama pull qwen2.5:1.5b`
+**Prerequisites:** Python 3.10+ (tested on 3.12), Docker & Docker Compose, and optionally [Ollama](https://ollama.com) for local inference (`ollama pull qwen2.5:1.5b`).
 
-### 1. Clone the Repository
 ```bash
+# 1. Clone
 git clone https://github.com/your-username/quantitative-finance-agentic-rag-system.git
 cd quantitative-finance-agentic-rag-system
-```
 
-### 2. Configure Environment
-```bash
+# 2. Configure (add your PostgreSQL credentials, API keys, model settings)
 cp .env.example .env
-# Edit .env with your PostgreSQL credentials, API keys, and model settings
-```
 
-### 3. Setup Virtual Environment & Install Dependencies
-```bash
+# 3. Environment
 python -m venv .venv
-
-# On Linux/macOS:
-source .venv/bin/activate
-# On Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-
+source .venv/bin/activate          # Windows: .venv\Scripts\Activate.ps1
 pip install --upgrade pip
 pip install -r requirements.txt
-```
 
-### 4. Start Infrastructure (PostgreSQL & Qdrant)
-```bash
+# 4. Infrastructure (TimescaleDB + Qdrant)
 docker compose up -d
 ```
 
-### 5. Launch Application Services
-In separate terminal tabs:
+Then run the two services in separate terminals:
 
-**Terminal 1 — FastAPI Backend**:
 ```bash
+# Terminal 1 — API
 uvicorn src.api.main:app --host 127.0.0.1 --port 8000
-```
 
-**Terminal 2 — Streamlit Interface**:
-```bash
+# Terminal 2 — Dashboard (opens at http://localhost:8501)
 streamlit run app/Home.py
 ```
-Open [http://localhost:8501](http://localhost:8501) in your browser.
 
 ---
 
@@ -306,42 +243,40 @@ Open [http://localhost:8501](http://localhost:8501) in your browser.
 
 ```
 .
-├── .env.example                     # Environment template for credentials & endpoints
-├── .gitignore                       # Production gitignore (filters caches, volumes, logs)
-├── docker-compose.yaml              # TimescaleDB & Qdrant cluster orchestration
+├── .env.example                     # Credentials & endpoints template
+├── docker-compose.yaml              # TimescaleDB & Qdrant
 ├── requirements.txt                 # Pinned dependencies
-├── app/                             # Streamlit Web Application
-│   ├── Home.py                      # Executive summary & navigation landing
-│   ├── theme.py                     # Custom dark theme, metrics & Plotly styling
+├── img/
+│   ├── quant1.svg                   # Figure 1: system architecture
+│   └── quant2.svg                   # Figure 2: gatekeeper decision flow
+├── app/                             # Streamlit application
+│   ├── Home.py
+│   ├── theme.py                     # Dark theme, metrics, Plotly styling
 │   └── pages/
-│       ├── 1_ML_Performance.py      # Classifier evaluation & feature diagnostics
-│       ├── 2_Backtest.py            # Event-driven backtesting platform
-│       ├── 3_Pairs_Regime.py        # Cointegration monitor & regime tracker
-│       └── 4_Live_Gatekeeper.py     # Live RAG Gatekeeper & ML Backtest Arena
-├── src/                             # Core Python Package
-│   ├── agent/                       # Agentic Risk Gatekeeper & LLM Tools
+│       ├── 1_ML_Performance.py
+│       ├── 2_Backtest.py
+│       ├── 3_Pairs_Regime.py
+│       └── 4_Live_Gatekeeper.py
+├── src/
+│   ├── agent/                       # Agentic risk gatekeeper
 │   │   ├── agent.py                 # Skeptical forensic risk manager (LangChain)
-│   │   ├── prefilter.py             # 0ms Qdrant metadata pre-filter
-│   │   ├── schemas.py               # Pydantic request & response models
-│   │   └── tools.py                 # Hybrid vector retrieval & MC simulation tool
-│   ├── api/                         # FastAPI Microservice
-│   │   └── main.py                  # High-throughput REST API endpoints
-│   ├── quant/                       # Quantitative Engineering
-│   │   ├── backtest.py              # Event-driven pairs trading backtester
-│   │   ├── monte_carlo.py           # Ornstein-Uhlenbeck spread simulator
-│   │   └── pairs_selection.py       # Cointegration screening & Kalman filters
-│   └── rag/                         # Scraping & Ingestion Pipeline
-│       ├── scraping/                # SEC EDGAR & earnings transcript scrapers
-│       └── qdrant/                  # FastEmbed chunking & vector ingestion
-└── tests/                           # Pytest Automated Test Suite (34 tests)
-    ├── test_backtest_coverage.py    # PIT retrieval & data integrity tests
-    ├── test_agentic_gatekeeper.py   # LLM structured output & pre-filter tests
-    ├── test_monte_carlo.py          # OU mathematics & simulation tool tests
-    └── test_gatekeeper_api.py       # FastAPI microservice endpoint tests
+│   │   ├── prefilter.py             # 0 ms Qdrant metadata pre-filter
+│   │   ├── schemas.py               # Pydantic request/response models
+│   │   └── tools.py                 # Hybrid retrieval & Monte Carlo tool
+│   ├── api/
+│   │   └── main.py                  # FastAPI endpoints
+│   ├── quant/
+│   │   ├── backtest.py              # Event-driven pairs backtester
+│   │   ├── monte_carlo.py           # OU spread simulator
+│   │   └── pairs_selection.py       # Cointegration screening & Kalman filter
+│   └── rag/
+│       ├── scraping/                # SEC EDGAR & transcript scrapers
+│       └── qdrant/                  # FastEmbed chunking & ingestion
+└── tests/                           # 34 pytest tests
 ```
 
 ---
 
 ## 📜 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Distributed under the **MIT License**. See `LICENSE` for details.
