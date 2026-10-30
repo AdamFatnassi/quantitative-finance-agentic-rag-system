@@ -35,7 +35,7 @@ This project places an **Agentic Risk Gatekeeper** between the quantitative sign
 Data flows from two sources (prices and regulatory text) into a storage layer, then through the quant engine, the risk gatekeeper, and finally the serving layer.
 
 <p align="center">
-  <img src="img/quant1.svg" alt="End-to-end system architecture: data sources, storage layer, quant engine, agentic risk gatekeeper, serving layer" width="720">
+  <img src="imgs\quant1.svg" alt="End-to-end system architecture: data sources, storage layer, quant engine, agentic risk gatekeeper, serving layer" width="720">
 </p>
 
 <p align="center"><em>Figure 1 — End-to-end architecture</em></p>
@@ -47,7 +47,7 @@ Data flows from two sources (prices and regulatory text) into a storage layer, t
 Every signal takes one of two paths. The **fast path** (no filing in the last 7 days) returns GO immediately. The **agent path** wakes the LLM, and only escalates to Monte Carlo when the text is ambiguous.
 
 <p align="center">
-  <img src="img/quant2.svg" alt="Gatekeeper decision flow: 7-day pre-filter, LLM text evaluation, Monte Carlo breach probability check, GO or VETO" width="600">
+  <img src="imgs\quant2.svg" alt="Gatekeeper decision flow: 7-day pre-filter, LLM text evaluation, Monte Carlo breach probability check, GO or VETO" width="600">
 </p>
 
 <p align="center"><em>Figure 2 — Risk gatekeeper decision logic</em></p>
